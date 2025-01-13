@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1078175140637",
+    "project_id": "ar-decor-6851a",
+    "storage_bucket": "ar-decor-6851a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1078175140637:android:8d06c4151a07c8dbf56ff4",
+        "android_client_info": {
+          "package_name": "com.example.ar_decor.ar_decor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1X3-4TyHBb0IrBdEbiHhfFwKzOIk95-4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
