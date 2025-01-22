@@ -30,7 +30,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -42,8 +41,9 @@ dependencies:
   firebase_database: ^11.3.0
   camera: ^0.11.0+2
   permission_handler: ^10.1.0
-#  arcore_flutter_plugin: ^0.1.0
   vector_math: ^2.1.4
+  flutter_cube: ^0.1.1
+#  arcore_flutter_plugin: 0.1.0
 
 
 dev_dependencies:
@@ -71,8 +71,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
-    - assets/models/Chair1.obj
-
+    - assets/models/
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

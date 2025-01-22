@@ -21,7 +21,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   bool isLoading = true;
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
-  int _selectedCameraIndex = 0; // 0: back camera, 1: front camera
+  final int _selectedCameraIndex = 0; // 0: back camera, 1: front camera
 
   // Form Controllers
   final TextEditingController nameController = TextEditingController();
