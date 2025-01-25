@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../Signin_Screen.dart';
 import '../AddProducts.dart';
 import '../AdminDashboard.dart';
+import '../AdminViewProducts.dart';
 import '../OrderRequest.dart';
 import '../ViewUserProfile.dart';
 
@@ -131,6 +132,18 @@ class _AdminDrawerState extends State<AdminDrawer> {
               context,
               MaterialPageRoute(
                   builder: (context) => const AddProductScreen()),
+            );
+          },
+        ),
+        const Divider(color: Colors.blue, thickness: 2),
+        ListTile(
+          leading: const Icon(Icons.add_shopping_cart),
+          title: const Text('View Products'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const AdminViewProducts()),
             );
           },
         ),

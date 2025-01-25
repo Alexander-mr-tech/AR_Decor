@@ -14,6 +14,22 @@ class UserViewOrders extends StatefulWidget {
 class _UserViewOrdersState extends State<UserViewOrders> {
   final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
+  /// ✅ Function to get status color
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Colors.orange;
+      case 'accepted':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'completed':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (userId == null) {
@@ -43,8 +59,7 @@ class _UserViewOrdersState extends State<UserViewOrders> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (context) => const UserAddToCart()),
+                MaterialPageRoute(builder: (context) => const UserAddToCart()),
               );
             },
           ),
@@ -95,7 +110,6 @@ class _UserViewOrdersState extends State<UserViewOrders> {
               itemCount: orders.length,
               itemBuilder: (context, index) {
                 final orderDoc = orders[index];
-                // final orderId = orderDoc.id;
                 final order = orderDoc.data() as Map<String, dynamic>;
                 final productName = order['productName'] ?? 'Unknown Product';
                 final quantity = order['quantity'] ?? 0;
@@ -175,7 +189,7 @@ class _UserViewOrdersState extends State<UserViewOrders> {
                               ),
                               const SizedBox(height: 6),
 
-                              // Status
+                              // Status with Color Coding
                               Row(
                                 children: [
                                   const Text(
@@ -186,7 +200,7 @@ class _UserViewOrdersState extends State<UserViewOrders> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: status == 'Pending' ? Colors.orange : Colors.green,
+                                      color: _getStatusColor(status), // ✅ Color changes based on status
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(

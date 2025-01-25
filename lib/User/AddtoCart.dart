@@ -4,7 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'User Drawer/UserDrawer.dart';
 
 class UserAddToCart extends StatefulWidget {
-  const UserAddToCart({super.key});
+  final String? productId;
+  final String? productName;
+
+  const UserAddToCart({super.key, this.productId, this.productName});
 
   @override
   State<UserAddToCart> createState() => _UserAddToCartState();
@@ -13,50 +16,102 @@ class UserAddToCart extends StatefulWidget {
 class _UserAddToCartState extends State<UserAddToCart> {
   final userId = FirebaseAuth.instance.currentUser?.uid;
   bool isProcessingOrder = false;
+  String? processingProductId;
 
-  Future<void> placeOrder(List<QueryDocumentSnapshot> cartItems) async {
-    if (cartItems.isEmpty) {
+  /// ✅ Function to update quantity in Firestore
+  Future<void> _updateQuantity(String docId, int currentQuantity, int change) async {
+    int newQuantity = currentQuantity + change;
+    if (newQuantity <= 0) {
+      await FirebaseFirestore.instance.collection('Cart').doc(docId).delete();
+    } else {
+      await FirebaseFirestore.instance.collection('Cart').doc(docId).update({
+        'quantity': newQuantity,
+        'totalPrice': newQuantity * (await FirebaseFirestore.instance.collection('Cart').doc(docId).get()).data()?['price'],
+      });
+    }
+  }
+
+  /// ✅ Function to show popup & collect customer details before placing an order
+  void _showOrderPopup(BuildContext context, QueryDocumentSnapshot cartItem) {
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController addressController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Enter Your Details"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: "Customer Name"),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: addressController,
+              decoration: const InputDecoration(labelText: "Address"),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _buyNow(cartItem, nameController.text, addressController.text);
+            },
+            child: const Text("Place Order"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ Function to buy a **single** product and store total price + customer details
+  Future<void> _buyNow(QueryDocumentSnapshot cartItem, String customerName, String address) async {
+    if (customerName.isEmpty || address.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Your cart is empty.")),
+        const SnackBar(content: Text("Please enter your name and address!")),
       );
       return;
     }
 
+    final data = cartItem.data() as Map<String, dynamic>;
+
     setState(() {
-      isProcessingOrder = true;
+      processingProductId = cartItem.id;
     });
 
     try {
-      // Create an order
-      final orderItems = cartItems.map((item) {
-        final data = item.data() as Map<String, dynamic>;
-        return {
-          'productId': data['productId'],
-          'item name': data['item name'],
-          'price': data['price'],
-          'quantity': 1, // Assuming 1 for simplicity; you can extend this.
-        };
-      }).toList();
+      final totalPrice = data['price'] * data['quantity'];
 
-      final orderTotal = orderItems.fold<double>(
-        0.0,
-            (sum, item) => sum + (item['price'] as double),
-      );
-
-      await FirebaseFirestore.instance.collection('Orders').add({
+      // ✅ Prepare order details
+      final orderDetails = {
         'userId': userId,
-        'items': orderItems,
-        'totalPrice': orderTotal,
+        'status': 'Pending',
+        'productId': data['productId'],
+        'imageUrl': data['image url'],
+        'productName': data['productName'],
+        'price': data['price'],
+        'quantity': data['quantity'],
+        'totalPrice': totalPrice, // ✅ Store correct total price
+        'customerName': customerName, // ✅ Store Customer Name
+        'address': address, // ✅ Store Address
         'orderDate': FieldValue.serverTimestamp(),
-      });
+      };
 
-      // Clear the cart
-      for (var item in cartItems) {
-        await item.reference.delete();
-      }
+      // ✅ Save order in Firestore
+      await FirebaseFirestore.instance.collection('Orders').add(orderDetails);
+
+      // ✅ Remove the purchased item from cart
+      await cartItem.reference.delete();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Order placed successfully!")),
+        SnackBar(content: Text("Order placed successfully! Total: \$${totalPrice.toStringAsFixed(2)}")),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -64,7 +119,7 @@ class _UserAddToCartState extends State<UserAddToCart> {
       );
     } finally {
       setState(() {
-        isProcessingOrder = false;
+        processingProductId = null;
       });
     }
   }
@@ -112,88 +167,104 @@ class _UserAddToCartState extends State<UserAddToCart> {
           }
 
           final cartItems = snapshot.data!.docs;
+          return ListView.builder(
+            itemCount: cartItems.length,
+            itemBuilder: (context, index) {
+              final cartItem = cartItems[index];
+              final docId = cartItem.id;
+              final productName = cartItem['productName'] ?? 'Unknown';
+              final price = cartItem['price'] ?? 0.0;
+              final imageUrl = cartItem['image url'] ?? '';
+              final quantity = cartItem['quantity'] ?? 1;
+              final totalPrice = price * quantity;
 
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: cartItems.length,
-                  itemBuilder: (context, index) {
-                    final cartItem = cartItems[index];
-                    final productName = cartItem['item name'] ?? 'Unknown';
-                    final price = cartItem['price'] ?? 0.0;
-                    final imageUrl = cartItem['image url'] ?? '';
+              return Card(
+                margin: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 16,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 5,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      // ✅ Image
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          imageUrl,
+                          height: 70,
+                          width: 70,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.broken_image),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                        vertical: 8,
-                        horizontal: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 5,
-                      child: ListTile(
-                        leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            imageUrl,
-                            height: 50,
-                            width: 50,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.broken_image),
-                          ),
-                        ),
-                        title: Text(
-                          productName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'Price: \$${price.toStringAsFixed(2)}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            await cartItem.reference.delete();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Item removed from cart."),
+                      // ✅ Product Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              productName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
-                            );
-                          },
+                            ),
+                            Text(
+                              'Item Price: \$${price.toStringAsFixed(2)}',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            Text(
+                              'Total Price: \$${totalPrice.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  onPressed: isProcessingOrder
-                      ? null
-                      : () => placeOrder(cartItems),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 16),
-                    backgroundColor: Colors.indigo,
+
+                      // ✅ Quantity Controls
+                      Column(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle, color: Colors.red),
+                            onPressed: () => _updateQuantity(docId, quantity, -1),
+                          ),
+                          Text(
+                            quantity.toString(),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle, color: Colors.green),
+                            onPressed: () => _updateQuantity(docId, quantity, 1),
+                          ),
+                        ],
+                      ),
+
+                      // ✅ Buy Now Button
+                      ElevatedButton(
+                        onPressed: processingProductId == cartItem.id
+                            ? null
+                            : () => _showOrderPopup(context, cartItem),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                        child: processingProductId == cartItem.id
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text("Buy Now"),
+                      ),
+                    ],
                   ),
-                  child: isProcessingOrder
-                      ? const CircularProgressIndicator(
-                    color: Colors.white,
-                  )
-                      : const Text(
-                    "Buy Now",
-                    style: TextStyle(fontSize: 18),
-                  ),
                 ),
-              ),
-            ],
+              );
+            },
           );
         },
       ),

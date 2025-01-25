@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -37,12 +38,16 @@ dependencies:
   fluttertoast: ^8.2.10
   firebase_auth: ^5.4.0
   cloud_firestore: ^5.6.1
-  flutter_native_splash: ^2.2.19
+  flutter_native_splash: ^2.2.16
   firebase_database: ^11.3.0
   camera: ^0.11.0+2
   permission_handler: ^10.1.0
   vector_math: ^2.1.4
   flutter_cube: ^0.1.1
+  image: ^3.1.1
+  three_dart: ^0.0.5
+  ar_flutter_plugin: ^0.7.3
+  camera_web: ^0.3.5
 #  arcore_flutter_plugin: 0.1.0
 
 
@@ -71,7 +76,12 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
-    - assets/models/
+    - assets/models/Chair1.obj
+    - assets/models/Chair1.mtl
+    - assets/models/2013112203271069358.jpg
+    - assets/models/20131121101217386434.jpg
+    - assets/models/20131122032710693145.jpg
+    - assets/models/REFLECT.jpg
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

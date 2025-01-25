@@ -234,7 +234,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => FullScreenCamera()),
+                            builder: (context) => Aecore()),
                       );
                     },
                     child: const Text('View in AR'),

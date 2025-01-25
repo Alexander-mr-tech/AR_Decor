@@ -15,6 +15,7 @@ class UserViewProducts extends StatefulWidget {
 class _UserViewProductsState extends State<UserViewProducts> {
   String searchQuery = '';
 
+  /// ✅ Function to navigate to the product details screen
   void viewDetails(String productId) {
     Navigator.push(
       context,
@@ -23,6 +24,68 @@ class _UserViewProductsState extends State<UserViewProducts> {
       ),
     );
   }
+
+  /// ✅ Function to add a product to the cart
+  Future<void> addToCart(Map<String, dynamic> product, String productId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to add items to the cart.')),
+      );
+      return;
+    }
+
+    try {
+      final cartCollection = FirebaseFirestore.instance.collection('Cart');
+      final existingItem = await cartCollection
+          .where('userId', isEqualTo: userId)
+          .where('productId', isEqualTo: productId)
+          .limit(1)
+          .get();
+
+      if (existingItem.docs.isNotEmpty) {
+        // ✅ Update quantity if product already exists in cart
+        final docId = existingItem.docs.first.id;
+        final currentQuantity = existingItem.docs.first['quantity'] ?? 1;
+        await cartCollection.doc(docId).update({'quantity': currentQuantity + 1});
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Product quantity updated in cart!')),
+        );
+      } else {
+        // ✅ Add new product to the cart
+        await cartCollection.add({
+          'userId': userId,
+          'productId': productId,
+          'productName': product['item name'] ?? product['productName'] ?? 'Unknown',
+          'price': product['price'],
+          'image url': product['image url'],
+          'quantity': 1,
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Product added to cart successfully!')),
+        );
+      }
+
+      // ✅ Navigate to Cart Screen with Product Details
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => UserAddToCart(
+            productId: productId,
+            productName: product['productName'] ?? 'Unknown',
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add to cart: $e')),
+      );
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -41,8 +104,7 @@ class _UserViewProductsState extends State<UserViewProducts> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (context) => const UserAddToCart()),
+                MaterialPageRoute(builder: (context) => const UserAddToCart()),
               );
             },
           ),
@@ -60,7 +122,7 @@ class _UserViewProductsState extends State<UserViewProducts> {
         ),
         child: Column(
           children: [
-            // Search Bar
+            // ✅ Search Bar
             TextField(
               onChanged: (value) {
                 setState(() {
@@ -79,7 +141,7 @@ class _UserViewProductsState extends State<UserViewProducts> {
             ),
             const SizedBox(height: 16),
 
-            // Product List
+            // ✅ Product List
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection('Products').snapshots(),
@@ -126,9 +188,9 @@ class _UserViewProductsState extends State<UserViewProducts> {
                   return ListView.builder(
                     itemCount: products.length,
                     itemBuilder: (context, index) {
-                      final productDoc = products[index]; // Get the document
-                      final productId = productDoc.id; // Extract the Firestore document ID
-                      final product = productDoc.data() as Map<String, dynamic>; // Get the product data
+                      final productDoc = products[index];
+                      final productId = productDoc.id;
+                      final product = productDoc.data() as Map<String, dynamic>;
                       final imageUrl = product['image url'] ?? 'Unknown';
                       final name = product['item name'] ?? 'Unknown';
                       final price = product['price'] ?? 0.0;
@@ -143,7 +205,7 @@ class _UserViewProductsState extends State<UserViewProducts> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Image Section
+                            // ✅ Image Section
                             ClipRRect(
                               borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(16),
@@ -157,7 +219,7 @@ class _UserViewProductsState extends State<UserViewProducts> {
                               ),
                             ),
 
-                            // Content Section
+                            // ✅ Content Section
                             Padding(
                               padding: const EdgeInsets.all(16),
                               child: Column(
@@ -195,51 +257,20 @@ class _UserViewProductsState extends State<UserViewProducts> {
                               ),
                             ),
 
-                            // Button Section
+                            // ✅ Button Section
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   ElevatedButton(
-                                    onPressed: () => viewDetails(productId), // Pass the product ID
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                      backgroundColor: Colors.blueAccent,
-                                    ),
+                                    onPressed: () => viewDetails(productId),
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
                                     child: const Text('View Details'),
                                   ),
                                   ElevatedButton(
-                                    onPressed: () async {
-                                      final userId = FirebaseAuth.instance.currentUser?.uid;
-                                      if (userId == null) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Please log in to add items to the cart.')),
-                                        );
-                                        return;
-                                      }
-
-                                      try {
-                                        await FirebaseFirestore.instance.collection('Cart').add({
-                                          'userId': userId, // Ensure the userId is included in the document
-                                          'item name': product['item name'],
-                                          'price': product['price'],
-                                          'image url': product['image url'],
-                                          'quantity': 1,
-                                        });
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Product added to cart successfully!')),
-                                        );
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Failed to add to cart: $e')),
-                                        );
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                      backgroundColor: Colors.green,
-                                    ),
+                                    onPressed: () => addToCart(product, productId),
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                                     child: const Text('Add to Cart'),
                                   ),
                                 ],
@@ -250,7 +281,6 @@ class _UserViewProductsState extends State<UserViewProducts> {
                       );
                     },
                   );
-
                 },
               ),
             ),
